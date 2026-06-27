@@ -1,6 +1,8 @@
-def call(Map config = [:]) {
-    def imageName = config.imageName
-    def imageTag = config.get('imageTag', 'latest')
+def call(String imageName, Object imageTag) {
+
+    // Convertiamo esplicitamente il tag in Stringa pura, così se arriva un GString da Jenkins viene ripulito
+    def tag = imageTag.toString()
+
 
     if(!imageName) {
         error " ❌ [Shared Library] Il parametro 'imageName' è obbligatorio"

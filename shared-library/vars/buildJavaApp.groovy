@@ -21,7 +21,7 @@ def call(Map config = [:]) {
                         echo "🚀 [Shared Library] Avvio compilazione Java  con JDK ${jdkVersion}..."
                     }
                     // Compiliamo il codice ed eseguiamo i test unitari generando i report di copertura
-                    sh "mv clean verify -B"
+                    sh "mvn clean verify -B"
                 }
             }
 
@@ -48,8 +48,11 @@ def call(Map config = [:]) {
 
             stage('Docker Build') {
                 steps {
-                    echo "📦 [Shared Library] Creazione immagine Docker..."
-                    sh "docker build -t ${config.appName}:latest ."
+                    // RIUTILIZZO: Richiamiamo l'altro file della libreria (dockerBuildPush.groovy)
+                    dockerBuildPush(
+                            imageName: config.appName,
+                            imageTag: 'latest'
+                    )
                 }
             }
         }

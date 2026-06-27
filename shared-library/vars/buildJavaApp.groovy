@@ -3,6 +3,9 @@ def call() {
     def jdkVersion = '21'
     echo "🚀 [Shared Library] Avvio compilazione Java con JDK ${jdkVersion}..."
 
+    // Diamo i permessi di esecuzione al wrapper (essenziale su sistemi Linux/Docker)
+    sh "chmod +x ./mvnw"
+
     // Compiliamo il codice ed eseguiamo i test unitari generando i report di copertura
     sh "mvn clean verify -B"
 

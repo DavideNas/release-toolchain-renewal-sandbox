@@ -10,8 +10,11 @@ def call(String imageName, Object imageTag) {
     // Recuperiamo il percorso del client Docker installato tramite i Tools di Jenkins
     def dockerTool = tool name: 'docker-tool', type: 'org.jenkinsci.plugins.docker.commons.tools.DockerTool'
 
+    // Costruiamo il percorso completo del binario
+    def dockerBinary = "${dockerTool}/bin/docker"
+
     echo "🐳 [Shared Library] Costruzione immagine Docker: ${imageName}:${imageTag}..."
 
     // Utilizziamo il percorso assoluto del tool per eseguire il comando build
-    sh "docker build --no-cache -t ${imageName}:${imageTag} ."
+    sh "${dockerBinary} build --no-cache -t ${imageName}:${tag} ."
 }

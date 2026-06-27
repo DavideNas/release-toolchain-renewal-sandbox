@@ -5,13 +5,16 @@ def call() {
     // Carichiamo lo strumento Maven configurato su Jenkins (usa lo stesso nome inserito nei Tools)
     def mavenTool = tool name: 'M3', type: 'maven'
 
-    // Eseguiamo i comandi inserendo il path corretto di Maven
-    sh "${mavenTool}/bin/mvn clean verify -B"
+    // Entriamo nella sottocartella dove risiedono il pom.xml e il codice sorgente
+    dir("services/order-service") {
+        // Eseguiamo i comandi inserendo il path corretto di Maven
+        sh "${mavenTool}/bin/mvn clean verify -B"
 
-    // Invio del codice a SonarQube per l'analisi SAST
-    echo "🛡️ [Shared Library] Invio del codice a SonarQube per l'analisi SAST..."
-    withSonarQubeEnv('SonarQube') {
-        sh "${mavenTool}/bin/mvn sonar:sonar -Dsonar.projectKey=${env.JOB_NAME} -Dsonar.projectName=${env.JOB_NAME}"
+        // Invio del codice a SonarQube per l'analisi SAST
+        echo "🛡️ [Shared Library] Invio del codice a SonarQube per l'analisi SAST..."
+        withSonarQubeEnv('SonarQube') {
+            sh "${mavenTool}/bin/mvn sonar:sonar -Dsonar.projectKey=${env.JOB_NAME} -Dsonar.projectName=${env.JOB_NAME}"
+        }
     }
 
     // In attesa del verdetto del Quality Gate

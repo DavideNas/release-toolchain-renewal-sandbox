@@ -1,0 +1,33 @@
+# Docker Compose file per il toolchain - Copia della configurazione di base presente su Portainer
+
+version: '3.8'
+
+networks:
+  toolchain-net:
+    external: true # Diciamo a Compose che la rete l'abbiamo già creata noi su Portainer
+
+volumes:
+  jenkins_home:
+
+services:
+  # --- ORCHESTRATORE CENTRALE ---
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: sandbox-jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - CASC_JENKINS_CONFIG=/var/jenkins_home/jcasc/jenkins.yaml
+      # Plugin richiesti dalla JD di Capgemini
+      - JENKINS_PLUGINS_NEXT=git workflow-override-step-plugin workflow-aggregator pipeline-stage-view configuration-as-code sonar ansicolor ansible matrix-auth
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # Mount diretto del file JCasC che andiamo a creare nel box sotto!
+      - /opt/jenkins/jcasc:/var/jenkins_home/jcasc:ro
+      # Permette a Jenkins di controllare il Docker del tuo Linux Mint
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - toolchain-net
+    restart: unless-stopped

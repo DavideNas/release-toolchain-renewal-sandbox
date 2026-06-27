@@ -1,0 +1,52 @@
+// Importiamo la Shared Library che abbiamo registrato su Jenkins
+@Library('capgemini-devops-library') _
+
+pipeline {
+    agent any
+
+    options {
+        // Evita di riempire il disco tenendo solo le ultime 10 build
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        // Timeout di sicurezza se qualcosa si pianta
+        timeout(time: 10, unit: 'MINUTES')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Pulizia preventiva dell'area di lavoro
+                cleanWs()
+                // Preleva il codice dal branch corrente
+                checkout scm
+            }
+        }
+
+        stage('Compile & Package') {
+            steps {
+                script {
+                    // Invochiamo il custom step della nostra Shared Library
+                    buildJavaApp()
+                }
+            }
+        }
+
+        stage('Docker Build & Tag') {
+            steps {
+                script {
+                    // Invochiamo il secondo custom step per creare l'immagine locale
+                    // Passiamo il nome dell'applicazione e usiamo l'ID della build come tag
+                    dockerBuildPush('order-service', "${env.BUILD_NUMBER}")
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "🎉 Ottimo lavoro! La pipeline di order-service è VERDE. Immagine creata con successo."
+        }
+        failure {
+            echo "❌ Qualcosa è andato storto. Controlla i log di compilazione o il demone Docker."
+        }
+    }
+}

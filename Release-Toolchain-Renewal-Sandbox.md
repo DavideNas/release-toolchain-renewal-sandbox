@@ -95,40 +95,41 @@ flowchart TB
 - `notification-service` — Python / FastAPI
 ---
  
-## Timeline — 3 settimane, 15 giorni lavorativi
+## Timeline — 3 settimane, 16 giorni lavorativi
  
-### Sprint 1 — Assessment & Fondamenta (gg 1-5)
+### Sprint 1 — Assessment & Fondamenta (gg 1-6)
 *Obiettivo: il toolchain "as-is" è in piedi, primo microservizio passa nella pipeline base.*
- 
+
 | Giorno | Task | Deliverable | Punto JD | Perché in questo ordine |
-|---|---|---|---|---|
-| 1 | Repo skeleton (3 microservizi, GitFlow branch model documentato), Docker Compose con Jenkins (JCasC) + Portainer | `docker-compose.yml` toolchain v0, repo Git inizializzati | CI/CD & Automation / Git GitFlow | Senza il "campo di gioco" non puoi scrivere nessuna pipeline. Parti dall'infrastruttura minima, non dal codice applicativo |
-| 2 | `order-service` minimale (CRUD + Actuator/Micrometer per metriche future), Dockerfile multi-stage | Immagine Docker buildabile localmente | Container & Cloud / Docker | Devi avere *qualcosa* da pipelinare prima di scrivere Jenkinsfile — l'app è lo strumento, non il prodotto |
-| 3 | Primo `Jenkinsfile` dichiarativo (checkout → build → test → docker build), Jenkins Shared Library scaffolding (`vars/`, `src/`) | Pipeline verde su `order-service` | Jenkins pipeline dichiarative/scripted, Groovy | Qui impari la differenza dichiarativo/scripted e *perché* le Shared Library esistono: evitare di copiare lo stesso Jenkinsfile 3 volte sui microservizi |
-| 4 | SonarQube in Compose + stage SAST nel Jenkinsfile con quality gate bloccante | Pipeline che fallisce se il gate Sonar non passa | DevSecOps shift-left, SonarQube | Shift-left vuol dire: il primo gate di qualità arriva *prima* del deploy, non dopo. Lo metti appena hai una pipeline che builda |
-| 5 | Registry Docker locale + push immagine, Opensearch+Dashboards in Compose, primo shipping log Jenkins via Filebeat | Log Jenkins visibili su Opensearch Dashboards | ELK/Opensearch | Chiudi lo Sprint 1 con "osservabilità minima" — ti servirà per debug nei prossimi sprint quando le pipeline diventeranno più complesse |
- 
-### Sprint 2 — Design della soluzione & DevSecOps (gg 6-10)
+| --- | --- | --- | --- | --- |
+| **1** | Repo skeleton (3 microservizi, GitFlow documentato), Docker Compose con Jenkins (JCasC) + Portainer | `docker-compose.yml` toolchain v0, repo Git inizializzati via SSH | CI/CD & Automation / Git GitFlow | Senza il "campo di gioco" non puoi scrivere nessuna pipeline. Parti dall'infrastruttura minima, non dal codice applicativo. |
+| **2** | `order-service` minimale (CRUD + Actuator/Micrometer), Dockerfile multi-stage | Immagine Docker buildabile localmente | Container & Cloud / Docker | Devi avere *qualcosa* da pipelinare prima di scrivere il Jenkinsfile — l'app è lo strumento, non il prodotto. |
+| **3** | Scaffolding Jenkins Shared Library (`vars/`, `src/`), allineamento Plugin Core (Git/Pipeline) e Upgrade Core Jenkins | Struttura libreria Groovy pronta e Jenkins Core (v2.555.3) aggiornato | Jenkins Infrastructure, Groovy | Prima di scrivere le pipeline dei microservizi, centralizzi le logiche ripetitive (`buildJavaApp`, `dockerBuildPush`) per evitare il "copia-incolla" del codice. |
+| **4** | Primo `Jenkinsfile` dichiarativo su `order-service` integrato con la Shared Library via SCM | Prima pipeline verde (Checkout → Maven Build → Docker Build locale) | Jenkins Pipeline Dichiarative | Unisci l'applicazione (Giorno 2) alla Shared Library (Giorno 3) orchestrando il primo ciclo reale di build automatizzata. |
+| **5** | SonarQube in Compose + stage SAST nel Jenkinsfile con quality gate bloccante | Pipeline che fallisce se il gate Sonar non passa | DevSecOps shift-left, SonarQube | *Shift-left* reale: il primo gate di sicurezza e qualità del codice si posiziona subito dopo la build iniziale, bloccando i rilasci fallimentari sul nascere. |
+| **6** | Registry Docker locale + push immagine, Opensearch+Dashboards in Compose, primo shipping log Jenkins via Filebeat | Log Jenkins visibili su Opensearch Dashboards | ELK/Opensearch | Chiudi lo Sprint con l'osservabilità minima: ti servirà per il debug avanzato nei prossimi sprint quando le pipeline cresceranno. |
+
+### Sprint 2 — Design della soluzione & DevSecOps (gg 7-11)
 *Obiettivo: pipeline DevSecOps completa su tutti i microservizi, IaC del target k8s pronto (non ancora applicato in produzione del progetto).*
  
 | Giorno | Task | Deliverable | Punto JD | Perché |
-|---|---|---|---|---|
-| 6 | `inventory-service` (Quarkus) e `notification-service` (FastAPI) scaffolding, Shared Library estesa con stage parametrici per linguaggio diverso | 3 Jenkinsfile che riusano la stessa libreria | CI/CD end-to-end, Groovy | Qui dimostri il valore reale delle Shared Library: stage di build diversi (Maven/Quarkus/pip) dietro un'interfaccia comune |
-| 7 | Stage Dependency scan (OWASP Dependency-Check o Snyk CLI) su tutti e 3 i servizi | Report dipendenze, fail su CVE critiche | Dependency Scan, vulnerability management | Lo metti dopo il build perché serve l'artefatto/lockfile risolto, non il codice sorgente nudo |
-| 8 | Stage Trivy su immagine Docker dopo push a registry | Fail pipeline su CVE HIGH/CRITICAL nell'immagine | Container Scan | Container scan logicamente viene *dopo* il build dell'immagine — è l'ultimo controllo prima che l'artefatto sia "deployabile" |
-| 9 | Moduli Terraform: provider `kind` (o script local-exec se provider non disponibile) per il cluster, modulo Helm per `kube-prometheus-stack`. Stage Checkov nella pipeline su questi moduli | `terraform plan` pulito + Checkov senza findings bloccanti | Terraform (moduli, state), Checkov | L'IaC del target la scrivi ora, ma *non la applichi ancora* — stai nella fase "design", esattamente come nella JD: design prima del rollout |
-| 10 | Ruoli Ansible: `jenkins-agent-setup` (tool CLI su agent), `app-config` (template env-specific con Jinja2), playbook di smoke-test post-deploy | 3 playbook testati su un agent Docker | Ansible (playbook, roles) | Ansible qui ha un ruolo diverso da Terraform e devi saperlo argomentare: non provisiona infrastruttura, configura ciò che gira sopra |
+|--------|---|---|---|---|
+| 7      | `inventory-service` (Quarkus) e `notification-service` (FastAPI) scaffolding, Shared Library estesa con stage parametrici per linguaggio diverso | 3 Jenkinsfile che riusano la stessa libreria | CI/CD end-to-end, Groovy | Qui dimostri il valore reale delle Shared Library: stage di build diversi (Maven/Quarkus/pip) dietro un'interfaccia comune |
+| 8      | Stage Dependency scan (OWASP Dependency-Check o Snyk CLI) su tutti e 3 i servizi | Report dipendenze, fail su CVE critiche | Dependency Scan, vulnerability management | Lo metti dopo il build perché serve l'artefatto/lockfile risolto, non il codice sorgente nudo |
+| 9      | Stage Trivy su immagine Docker dopo push a registry | Fail pipeline su CVE HIGH/CRITICAL nell'immagine | Container Scan | Container scan logicamente viene *dopo* il build dell'immagine — è l'ultimo controllo prima che l'artefatto sia "deployabile" |
+| 10     | Moduli Terraform: provider `kind` (o script local-exec se provider non disponibile) per il cluster, modulo Helm per `kube-prometheus-stack`. Stage Checkov nella pipeline su questi moduli | `terraform plan` pulito + Checkov senza findings bloccanti | Terraform (moduli, state), Checkov | L'IaC del target la scrivi ora, ma *non la applichi ancora* — stai nella fase "design", esattamente come nella JD: design prima del rollout |
+| 11     | Ruoli Ansible: `jenkins-agent-setup` (tool CLI su agent), `app-config` (template env-specific con Jinja2), playbook di smoke-test post-deploy | 3 playbook testati su un agent Docker | Ansible (playbook, roles) | Ansible qui ha un ruolo diverso da Terraform e devi saperlo argomentare: non provisiona infrastruttura, configura ciò che gira sopra |
  
-### Sprint 3 — Wave 1, Wave 2 & dismissione (gg 11-15)
+### Sprint 3 — Wave 1, Wave 2 & dismissione (gg 12-16)
 *Obiettivo: rollout reale a due wave, observability end-to-end, decommissioning documentato.*
  
 | Giorno | Task | Deliverable | Punto JD | Perché |
-|---|---|---|---|---|
-| 11 | Stage di deploy verso Wave 1 (Docker Compose via Portainer API o stack file), DAST con OWASP ZAP baseline contro gli endpoint Wave 1 | 3 microservizi live su Compose, report ZAP | Workflow di deployment, DevSecOps | Wave 1 = ambiente "legacy-like": qui il deploy è il più semplice possibile, di proposito, perché rappresenta il sistema da sostituire |
-| 12 | Dashboard Grafana (metriche Wave1: latency, error rate, container resource) + alert basilari Prometheus | Dashboard funzionante, 1-2 alert rule | Monitorare pipeline e ambienti | Prima di passare a Wave 2 ti serve una baseline misurabile — altrimenti non puoi dire "abbiamo migliorato" |
-| 13 | `terraform apply` reale del cluster kind/k3d, registrazione del cluster su Portainer come secondo "environment" | Cluster k8s visibile in Portainer accanto allo stack Compose | Kubernetes, cruscotto unificato | Qui materializzi il design dello Sprint 2 — e risolvi concretamente il problema "JD": un solo pannello per due tecnologie diverse |
-| 14 | Pipeline estesa con stage `deploy-to-k8s` (Helm upgrade/install) per i 3 microservizi, playbook Ansible di validazione post-deploy su k8s, ZAP/Trivy ripetuti contro Wave 2 | Wave 2 live, stessi security gate applicati | Pipeline end-to-end, automazione completa | Wave 2 riusa *gli stessi* stage di sicurezza di Wave 1 tramite Shared Library — dimostri che il design DevSecOps è portabile tra target diversi |
-| 15 | Playbook Ansible + `terraform destroy` per dismettere Wave 1, documentazione tecnica finale (architettura, runbook, decisioni e trade-off), README portfolio con talking points per il colloquio | Repo finale + doc + diagramma architetturale | Definire standard, best practice, documentazione | Chiudi esattamente come chiuderebbe il progetto reale: smantellamento controllato + documentazione che un collega potrebbe seguire senza di te |
+|--------|---|---|---|---|
+| 12     | Stage di deploy verso Wave 1 (Docker Compose via Portainer API o stack file), DAST con OWASP ZAP baseline contro gli endpoint Wave 1 | 3 microservizi live su Compose, report ZAP | Workflow di deployment, DevSecOps | Wave 1 = ambiente "legacy-like": qui il deploy è il più semplice possibile, di proposito, perché rappresenta il sistema da sostituire |
+| 13     | Dashboard Grafana (metriche Wave1: latency, error rate, container resource) + alert basilari Prometheus | Dashboard funzionante, 1-2 alert rule | Monitorare pipeline e ambienti | Prima di passare a Wave 2 ti serve una baseline misurabile — altrimenti non puoi dire "abbiamo migliorato" |
+| 14     | `terraform apply` reale del cluster kind/k3d, registrazione del cluster su Portainer come secondo "environment" | Cluster k8s visibile in Portainer accanto allo stack Compose | Kubernetes, cruscotto unificato | Qui materializzi il design dello Sprint 2 — e risolvi concretamente il problema "JD": un solo pannello per due tecnologie diverse |
+| 15     | Pipeline estesa con stage `deploy-to-k8s` (Helm upgrade/install) per i 3 microservizi, playbook Ansible di validazione post-deploy su k8s, ZAP/Trivy ripetuti contro Wave 2 | Wave 2 live, stessi security gate applicati | Pipeline end-to-end, automazione completa | Wave 2 riusa *gli stessi* stage di sicurezza di Wave 1 tramite Shared Library — dimostri che il design DevSecOps è portabile tra target diversi |
+| 16     | Playbook Ansible + `terraform destroy` per dismettere Wave 1, documentazione tecnica finale (architettura, runbook, decisioni e trade-off), README portfolio con talking points per il colloquio | Repo finale + doc + diagramma architetturale | Definire standard, best practice, documentazione | Chiudi esattamente come chiuderebbe il progetto reale: smantellamento controllato + documentazione che un collega potrebbe seguire senza di te |
  
 ---
  

@@ -8,11 +8,14 @@ networks:
 
 volumes:
   jenkins_home:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
 
 services:
   # --- ORCHESTRATORE CENTRALE ---
   jenkins:
-    image: jenkins/jenkins:lts-jdk17
+    image: jenkins/jenkins:lts
     container_name: sandbox-jenkins
     ports:
       - "8080:8080"
@@ -31,3 +34,18 @@ services:
     networks:
       - toolchain-net
     restart: unless-stopped
+
+    # --- ANALISI STATICA DEL CODICE (STAST) ---
+    sonarqube:
+      # image: sonarqube:lts-community
+      image: sonarqube:26.6.0.123539-community # download latest lts version from official website to check latest image to pull
+      container_name: sandbox-sonarqube
+      ports:
+        - "9090:9000"
+      volumes:
+        - sonarqube_data:/opt/sonarqube/data
+        - sonarqube_extensions:/opt/sonarqube/extensions
+        - sonarqube_logs:/opt/sonarqube/logs
+      networks:
+        - toolchain-net
+      restart: unless-stopped

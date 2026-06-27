@@ -17,5 +17,5 @@ def call(String imageName, Object imageTag) {
 
     // Utilizziamo il percorso assoluto del tool per eseguire il comando build
     // Aggiungiamo il percorso (il punto alla fine indica il contesto, -f indica dove sta il Dockerfile)
-    sh "/usr/bin/docker build --no-cache -t ${imageName}:${tag} -f services/order-service/Dockerfile ."
+    sh "docker build --no-cache -t ${imageName}:${tag} -f services/order-service/Dockerfile ."
 }

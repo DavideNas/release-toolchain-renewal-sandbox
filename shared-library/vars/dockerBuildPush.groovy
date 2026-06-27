@@ -6,11 +6,6 @@ def call(Map config = [:]) {
         error " ❌ [Shared Library] Il parametro 'imageName' è obbligatorio"
     }
 
-    script {
-        echo "🐳 [Shared Library] Costruzione immagine Docker: ${imageName}:${imageTag}..."
-
-        stage('Docker Build') {
-            sh "docker build --no-cache -t ${imageName}:${imageTag} ."
-        }
-    }
+    echo "🐳 [Shared Library] Costruzione immagine Docker: ${imageName}:${imageTag}..."
+    sh "docker build --no-cache -t ${imageName}:${imageTag} ."
 }

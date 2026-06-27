@@ -1,60 +1,23 @@
-def call(Map config = [:]) {
-    pipeline {
-        agent any
+def call() {
+    // Definiamo direttamente qui la versione di default visto che non la passiamo dal Jenkinsfile
+    def jdkVersion = '21'
+    echo "🚀 [Shared Library] Avvio compilazione Java con JDK ${jdkVersion}..."
 
-        options {
-            timeout(time: 1, unit: 'HOURS')
-            ansiColor('xterm')
-        }
+    // Compiliamo il codice ed eseguiamo i test unitari generando i report di copertura
+    sh "mvn clean verify -B"
 
-        stages {
-            stage('Checkout') {
-                steps {
-                    checkout scm
-                }
-            }
+    // Invio del codice a SonarQube per l'analisi SAST
+    echo "🛡️ [Shared Library] Invio del codice a SonarQube per l'analisi SAST..."
+    // Richiamiamo il server configurato su Jenkins con il nome 'SonarQube'
+    withSonarQubeEnv('SonarQube') {
+        // Usiamo env.JOB_NAME che è una variabile globale sempre disponibile in Jenkins
+        sh "mvn sonar:sonar -Dsonar.projectKey=${env.JOB_NAME} -Dsonar.projectName=${env.JOB_NAME}"
+    }
 
-            stage('Maven Build & Test') {
-                steps {
-                    script {
-                        def jdkVersion = config.get('jdkVersion', '21')
-                        echo "🚀 [Shared Library] Avvio compilazione Java  con JDK ${jdkVersion}..."
-                    }
-                    // Compiliamo il codice ed eseguiamo i test unitari generando i report di copertura
-                    sh "mvn clean verify -B"
-                }
-            }
-
-            stage('SonarQube Analysis') {
-                steps {
-                    echo "🛡️ [Shared Library] Invio del codice a SonarQube per l'analisi SAST..."
-                    // Richiamiamoo il server configurato su Jenkins con il nome 'SonarQube'
-                    withSonarQubeEnv('SonarQube') {
-                        // Lanciamo lo scanner di Sonar integrato in Maven
-                        sh "mvn sonar:sonar -Dsonar.projectKey=${env.JOB_NAME} -Dsonar.projectName=${env.JOB_NAME}"
-                    }
-                }
-            }
-
-            stage('Quality Gate') {
-                steps {
-                    echo "⏳ [Shared Library] In attesa del verdetto del Quality Gate..."
-                    // Blocca la pipeline se SonarQube restituisce un errore (es. troppi bug o security vulnerability)
-                    timeout(time: 5, unit: 'MINUTES') {
-                        waitForQualityGate abortPipeline: true
-                    }
-                }
-            }
-
-            stage('Docker Build') {
-                steps {
-                    // RIUTILIZZO: Richiamiamo l'altro file della libreria (dockerBuildPush.groovy)
-                    dockerBuildPush(
-                            imageName: config.appName,
-                            imageTag: 'latest'
-                    )
-                }
-            }
-        }
+    // In attesa del verdetto del Quality Gate
+    echo "⏳ [Shared Library] In attesa del verdetto del Quality Gate..."
+    // Blocca la pipeline se SonarQube restituisce un errore
+    timeout(time: 5, unit: 'MINUTES') {
+        waitForQualityGate abortPipeline: true
     }
 }

@@ -16,5 +16,6 @@ def call(String imageName, Object imageTag) {
     echo "🐳 [Shared Library] Costruzione immagine Docker: ${imageName}:${imageTag}..."
 
     // Utilizziamo il percorso assoluto del tool per eseguire il comando build
-    sh "${dockerBinary} build --no-cache -t ${imageName}:${tag} ."
+    // Aggiungiamo il percorso (il punto alla fine indica il contesto, -f indica dove sta il Dockerfile)
+    sh "${dockerBinary} build --no-cache -t ${imageName}:${tag} -f services/order-service/Dockerfile ."
 }
